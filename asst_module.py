@@ -1,6 +1,11 @@
-import networkx as nx
+from networkx import Graph
+from networkx import DiGraph
+from networkx import connected_components
+from networkx import find_cycle
+from networkx import exception
 import sys
-
+import logging
+import logging.handlers
 
 class DataError(Exception):
     pass
@@ -9,57 +14,95 @@ class DataError(Exception):
 class CyclicDependency(Exception):
     pass
 
-
-def get_data(filename):
-    count=0
+#reads data from file
+#first line in the file specifies number of job
+#second line gives the number of pipelines
+#next line has job related data
+def get_data(filename)-> "data:dict(dict),time:dict,pipelines:int":
+    count = 0
     with open(filename) as f:
-        k=f.read().split()
-    data={}
-    time={}
-    pipelines=int(k[1])
-    for i in k[2:]:
-        count+=1
-        temp=i.split(",")
-        if temp[1]!='':
-            data[temp[0]]=temp[1].split("-")
+        file_data = f.read().split()
+    data = {}
+    time = {}
+    pipelines = int(file_data[1])
+
+    if pipelines == 0:
+        raise Exception("no processor found to execute the jobs")
+
+    for i in file_data[2:] :
+        count += 1
+        temp = i.split(",")
+        if temp[1] != '' :
+            data[temp[0]] = temp[1].split("-")
         else:
-            data[temp[0]]=[]
-        time[temp[0]]=int(temp[2])
-    if len(data)!=int(k[0]):
-        print(len(data),k[0])
-        raise DataError("Improper data format in the file:number of jobs referred:" +k[0]+"and actual number "+str(len(data))+"donot match")
-    if count!=len(data):
+            data[temp[0]] = []
+        time[temp[0]] = int(temp[2])
+
+    if len(data) !=  int(file_data[0]) :
+        print( len(data), file_data[0] )
+
+        raise DataError("Improper data format in the file:number of jobs referred:" +k[0]+"and actual number "+
+                        str(len(data))+"donot match")
+
+    if count != len(data) :
         raise Warning("Duplicate data identified. Proceeding with the lastest records")
 
-    return data,time,pipelines
+    return data, time, pipelines
 
-def get_info(data:"dict{dict}",time:dict,pipelines):
-    if contraint_check(data):
-        time_info=[]
-        for i in list(nx.connected_components(nx.Graph(data))):
+#process the data from file
+#checks for constraints from constraint check function
+#get the list of grouped jobs and their processing time
+def get_info(data:"graph data as dict{dict}" , time:dict, pipelines) -> "timeinfo:list,pipelines:int":
+    graph = Graph(data)
+    graph=graph.to_directed()
+    if contraint_check(DiGraph(data)) :
+        time_info = []
+        for i in list(connected_components(Graph(data))):
             time_info.append(sum([time[x] for x in i]))
-        return time_info,pipelines
+        return time_info, pipelines
 
-def get_least_time(times:list,m:"int :number of parallel machines"):
-    if len(times )<=m:
+#get the least time
+def get_least_time(times:list,pipelines:"number of parallel machines:int")->"time:int":
+    if len(times ) <= pipelines :
         return max(times)
-    a=times[:m]
-    for i in times[m:]:
-        a[a.index(min(a))]+=i
-    return max(a)
-
-
-def contraint_check(data:"dict{dict}"):
-    g=nx.Graph(data)
+    time_list = times[ : pipelines ]
+    for i in times[ pipelines : ] :
+        time_list[ time_list.index(min(time_list)) ] += i
+    return max(time_list)
+ 
+#checks for cyclic dependencies
+def contraint_check(graph:"Graph"):
     try:
-        print ("cycle found at :",nx.find_cycle(g))
-    except nx.exception.NetworkXNoCycle:
+        err="cycle found at :" + str(find_cycle(graph))
+        logger.error(CyclicDependency(err))
+        raise CyclicDependency(err)
+    except exception.NetworkXNoCycle as e:
         return True
 
+#function to unify all the above functions
 def get_time_from_data(filename):
-    return get_least_time(*get_info(*get_data(sys.argv[1])))
+    logging.info("reading data from file" +filename)
+    try:
+        result = get_least_time(*get_info(*get_data(sys.argv[1])))
+        logging.info("least time calculated" + str(result))
+    except DataError as e:
+        logging.error( str(e))
+        raise e
+    except  CyclicDependency as e:
+        logging.error(e)
+        raise e
 
-if __name__ == "__main__":
+    return result
+
+#adding new constraint check function or writing a nested function inside contraint check will easily extend hard or soft
+if __name__  == "__main__":
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logfile = logging.handlers.RotatingFileHandler('./asst.log', maxBytes=1024,)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logfile.setFormatter(formatter)
+    logger.addHandler(logfile)
+
     print(get_time_from_data(sys.argv[1]))
 
 
