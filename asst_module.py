@@ -84,7 +84,7 @@ def get_time_from_data(filename):
     logging.info("reading data from file" +filename)
     try:
         result = get_least_time(*get_info(*get_data(sys.argv[1])))
-        logging.info("least time calculated" + str(result))
+        logging.info("least time calculated " + str(result))
     except DataError as e:
         logging.error( str(e))
         raise e
