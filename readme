@@ -1,0 +1,13 @@
+info of test files
+test.txt - would file as it finds there is cyclic dependency
+test1.txt - it is passes and finds the time 25
+test3.txt - would faile because there is a cyclic
+
+input file format: 
+first line consiste of number of parallel processes
+second line has a pattern of A,B,C
+A:  consists name of the pricess
+B: dependency;  if 2 and 3 are dependent on 1 then B would be 2-3
+C: time taken for A to complete if it takes 10 then C is 10
+combining all the line would be 1,2-3,10
+all the following lines follow the same
