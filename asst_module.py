@@ -3,6 +3,7 @@ from networkx import DiGraph
 from networkx import connected_components
 from networkx import find_cycle
 from networkx import exception
+
 import sys
 import logging
 import logging.handlers
@@ -55,18 +56,43 @@ def get_data(filename) -> "data:dict(dict),time:dict,pipelines:int":
 # process the data from file
 # checks for constraints from constraint check function
 # get the list of grouped jobs and their processing time
+"""
 def get_info(data: "graph data as dict{dict}", time: dict, pipelines) -> "timeinfo:list,pipelines:int":
-    graph = Graph(data)
+    graph = DiGraph(data)
     if set(graph.nodes) ^ set( time.keys()) != set():
         raise DataError(" inconsistent with the node " +str(set(graph.nodes) ^ set( time.keys())))
-    graph = graph.to_directed()
-    if contraint_check(DiGraph(data)):
+    
+    
+    
+    if constraint_check(graph):
         time_info = []
         for i in list(connected_components(Graph(data))):
             time_info.append(sum([time[x] for x in i]))
         return time_info, pipelines
-
-
+"""
+def get_time(data,time,pipelines):
+    k=[0]*pipelines
+    graph=DiGraph(data)
+    constraint_check(graph)
+    while(True):
+        
+        z=dict(graph.in_degree())
+        
+        nodes_ = tuple((k for k,v in z.items() if v == 0))
+        if nodes_==():
+            print(graph.nodes)
+            break
+        print(nodes_,graph.nodes)
+        for i in nodes_ : 
+            graph.remove_node(i)
+            k[k.index(min(k))] += time[i]
+    return max(k)
+    
+        
+            
+        
+    
+"""    
 # get the least time
 def get_least_time(times: list, pipelines: "number of parallel machines:int") -> "time:int":
     if len(times) <= pipelines:
@@ -75,10 +101,10 @@ def get_least_time(times: list, pipelines: "number of parallel machines:int") ->
     for i in times[pipelines:]:
         time_list[time_list.index(min(time_list))] += i
     return max(time_list)
-
+"""
 
 # checks for cyclic dependencies
-def contraint_check(graph: "Graph"):
+def constraint_check(graph: "DiGraph"):
     try:
         err = "cycle found at :" + str(find_cycle(graph))
         logger.error(CyclicDependency(err))
@@ -91,7 +117,7 @@ def contraint_check(graph: "Graph"):
 def get_time_from_data(filename):
     logging.info("reading data from file" + filename)
     try:
-        result = get_least_time(*get_info(*get_data(sys.argv[1])))
+        result = get_time(*get_data(sys.argv[1]))
         logging.info("least time calculated" + str(result))
     except DataError as e:
         logging.error(str(e))
