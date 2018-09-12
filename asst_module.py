@@ -3,6 +3,7 @@ from networkx import DiGraph
 from networkx import connected_components
 from networkx import find_cycle
 from networkx import exception
+import networkx as nx
 
 import sys
 import logging
@@ -56,7 +57,6 @@ def get_data(filename) -> "data:dict(dict),time:dict,pipelines:int":
 # process the data from file
 # checks for constraints from constraint check function
 # get the list of grouped jobs and their processing time
-"""
 def get_info(data: "graph data as dict{dict}", time: dict, pipelines) -> "timeinfo:list,pipelines:int":
     graph = DiGraph(data)
     if set(graph.nodes) ^ set( time.keys()) != set():
@@ -69,30 +69,54 @@ def get_info(data: "graph data as dict{dict}", time: dict, pipelines) -> "timein
         for i in list(connected_components(Graph(data))):
             time_info.append(sum([time[x] for x in i]))
         return time_info, pipelines
-"""
+
 def get_time(data,time,pipelines):
-    k=[0]*pipelines
+    p=[0]*pipelines
     graph=DiGraph(data)
     constraint_check(graph)
+    jobs=[None]*pipelines
+    done=[]
+    gtime=0
     while(True):
         
-        z=dict(graph.in_degree())
         
-        nodes_ = tuple((k for k,v in z.items() if v == 0))
-        if nodes_==():
-            print(graph.nodes)
-            break
-        print(nodes_,graph.nodes)
-        for i in nodes_ : 
-            graph.remove_node(i)
-            k[k.index(min(k))] += time[i]
-    return max(k)
+        z=dict(graph.in_degree())
+
+        nodes_ = list((k for k,v in z.items() if v == 0))
+        print(done, jobs, p, nodes_)
+
+        while (0 in p) and nodes_!=[] :
+            
+            i=nodes_.pop()
+
+            jobs[jobs.index(None)]=i
+            p[p.index(0)]+=time[i]
+
+        while 0 not in p:
+            to_del=p.index(min(p))
+            val=p[to_del]
+
+            p[to_del]-= val
+            gtime+=val
+            done.append(jobs[to_del])
+            
+            graph.remove_node(jobs[to_del])
+            jobs[to_del]=None
+                
+                
+                    
+                 
+                
+        
+        
+        if set(graph.nodes).issubset(set(done)):
+            return gtime
     
         
             
         
     
-"""    
+    
 # get the least time
 def get_least_time(times: list, pipelines: "number of parallel machines:int") -> "time:int":
     if len(times) <= pipelines:
@@ -101,7 +125,7 @@ def get_least_time(times: list, pipelines: "number of parallel machines:int") ->
     for i in times[pipelines:]:
         time_list[time_list.index(min(time_list))] += i
     return max(time_list)
-"""
+
 
 # checks for cyclic dependencies
 def constraint_check(graph: "DiGraph"):
@@ -117,7 +141,7 @@ def constraint_check(graph: "DiGraph"):
 def get_time_from_data(filename):
     logging.info("reading data from file" + filename)
     try:
-        result = get_time(*get_data(sys.argv[1]))
+        result = get_least_time(*get_info(*get_data(sys.argv[1])))
         logging.info("least time calculated" + str(result))
     except DataError as e:
         logging.error(str(e))
@@ -137,8 +161,8 @@ if __name__ == "__main__":
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logfile.setFormatter(formatter)
     logger.addHandler(logfile)
-
-    print(get_time_from_data(sys.argv[1]))
+    get_time(*get_data("test5.txt"))
+    #print(get_time_from_data(sys.argv[1]))
 
 
 
