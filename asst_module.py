@@ -69,48 +69,58 @@ def get_info(data: "graph data as dict{dict}", time: dict, pipelines) -> "timein
         for i in list(connected_components(Graph(data))):
             time_info.append(sum([time[x] for x in i]))
         return time_info, pipelines
-
+def getmin(a):
+    j=min(a)
+    if j==0:
+        check = [x for x in a if x != 0]
+        if check==[]:
+            return 0
+        else:
+            return min(check)
+    else:
+        return j
 def get_time(data,time,pipelines):
     p=[0]*pipelines
     graph=DiGraph(data)
     constraint_check(graph)
-    jobs=[None]*pipelines
+    jobs=[]
+    for i in range(pipelines):
+        jobs.append(None)
     done=[]
     gtime=0
     while(True):
+
         
         
         z=dict(graph.in_degree())
 
         nodes_ = list((k for k,v in z.items() if v == 0))
-        print(done, jobs, p, nodes_)
+        for i in jobs:
+            if i  in nodes_:
+                nodes_.remove(i)
+
 
         while (0 in p) and nodes_!=[] :
             
             i=nodes_.pop()
 
-            jobs[jobs.index(None)]=i
-            p[p.index(0)]+=time[i]
+            pointer=p.index(min(p))
+            jobs[pointer]=i
+            p[pointer]+=time[i]
+        val=getmin(p)
+        for i in range(pipelines):
+            if p[i]==0:
+                continue
+            p[i]-= val
+            if p[i]==0:
+                done.append(jobs[i])
+                graph.remove_node((jobs[i]))
+                jobs[i] = None
 
-        while 0 not in p:
-            to_del=p.index(min(p))
-            val=p[to_del]
+        gtime+=val
 
-            p[to_del]-= val
-            gtime+=val
-            done.append(jobs[to_del])
-            
-            graph.remove_node(jobs[to_del])
-            jobs[to_del]=None
-                
-                
-                    
-                 
-                
-        
-        
-        if set(graph.nodes).issubset(set(done)):
-            return gtime
+        if list(graph.nodes)==[]:
+            return gtime+max(p)
     
         
             
@@ -161,7 +171,8 @@ if __name__ == "__main__":
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logfile.setFormatter(formatter)
     logger.addHandler(logfile)
-    get_time(*get_data("test5.txt"))
+    print(get_time(*get_data(sys.argv[1])))
+
     #print(get_time_from_data(sys.argv[1]))
 
 
